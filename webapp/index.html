@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Продажи</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 16px;
+    font-family: -apple-system, system-ui, sans-serif;
+    background: var(--tg-theme-bg-color, #ffffff);
+    color: var(--tg-theme-text-color, #111111);
+  }
+  h1 { font-size: 17px; margin: 4px 0 12px; }
+  .card {
+    background: var(--tg-theme-secondary-bg-color, #f4f4f5);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+  input {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(120,120,120,0.25);
+    font-size: 15px;
+    background: var(--tg-theme-bg-color, #ffffff);
+    color: var(--tg-theme-text-color, #111111);
+  }
+  button {
+    width: 100%;
+    padding: 13px;
+    border: none;
+    border-radius: 10px;
+    background: var(--tg-theme-button-color, #2481cc);
+    color: var(--tg-theme-button-text-color, #ffffff);
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .tabs { display: flex; gap: 8px; margin-bottom: 10px; }
+  .tab {
+    flex: 1;
+    text-align: center;
+    padding: 8px;
+    border-radius: 8px;
+    background: var(--tg-theme-bg-color, #ffffff);
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .tab.active { background: var(--tg-theme-button-color, #2481cc); color: var(--tg-theme-button-text-color, #fff); }
+  .row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(120,120,120,0.15); }
+  .row:last-child { border-bottom: none; }
+  .rank { font-weight: 700; width: 22px; opacity: 0.7; }
+  .name { flex: 1; margin-left: 8px; }
+  .total { font-weight: 700; }
+  #status { font-size: 13px; margin-top: 6px; min-height: 16px; opacity: 0.8; }
+  .empty { text-align: center; opacity: 0.6; padding: 8px 0; }
+</style>
+</head>
+<body>
+  <h1>💸 Внести продажу</h1>
+  <div class="card">
+    <input id="product" placeholder="Что продали?" />
+    <input id="amount" type="number" inputmode="decimal" placeholder="Сумма, ₽" />
+    <button onclick="submitTx()">Добавить</button>
+    <div id="status"></div>
+  </div>
+
+  <h1>🏆 Таблица лидеров</h1>
+  <div class="tabs">
+    <div class="tab active" data-period="day">День</div>
+    <div class="tab" data-period="week">Неделя</div>
+    <div class="tab" data-period="month">Месяц</div>
+    <div class="tab" data-period="all">Всё время</div>
+  </div>
+  <div class="card" id="leaderboard"></div>
+
+<script>
+const tg = window.Telegram.WebApp;
+tg.ready();
+tg.expand();
+
+let currentPeriod = "day";
+
+async function submitTx() {
+  const productEl = document.getElementById("product");
+  const amountEl = document.getElementById("amount");
+  const status = document.getElementById("status");
+  const product = productEl.value.trim();
+  const amount = amountEl.value;
+
+  if (!product || !amount) {
+    status.textContent = "Заполни оба поля";
+    return;
+  }
+  status.textContent = "Отправка...";
+  try {
+    const res = await fetch("/api/transactions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ initData: tg.initData, product, amount }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    productEl.value = "";
+    amountEl.value = "";
+    status.textContent = "✅ Добавлено!";
+    if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+    loadLeaderboard();
+  } catch (e) {
+    status.textContent = "Ошибка: не получилось отправить";
+  }
+}
+
+async function loadLeaderboard() {
+  const el = document.getElementById("leaderboard");
+  el.innerHTML = "<div class='empty'>Загрузка...</div>";
+  try {
+    const res = await fetch(`/api/leaderboard?period=${currentPeriod}`);
+    const data = await res.json();
+    if (!data.length) {
+      el.innerHTML = "<div class='empty'>Пока пусто</div>";
+      return;
+    }
+    el.innerHTML = data
+      .map(
+        (r, i) => `
+      <div class="row">
+        <span class="rank">${i + 1}</span>
+        <span class="name">${r.full_name || r.username || "Без имени"}</span>
+        <span class="total">${Math.round(r.total)}₽</span>
+      </div>`
+      )
+      .join("");
+  } catch (e) {
+    el.innerHTML = "<div class='empty'>Не удалось загрузить</div>";
+  }
+}
+
+document.querySelectorAll(".tab").forEach((tab) => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+    tab.classList.add("active");
+    currentPeriod = tab.dataset.period;
+    loadLeaderboard();
+  });
+});
+
+loadLeaderboard();
+</script>
+</body>
+</html>
