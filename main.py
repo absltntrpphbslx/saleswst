@@ -128,6 +128,10 @@ async def create_transaction(request: Request):
 
     full_name = f"{user.get('first_name', '')} {user.get('last_name', '')}".strip()
     db.upsert_user(user["id"], user.get("username"), full_name)
+
+    # запоминаем топ-3 общего зачёта ДО добавления транзакции, чтобы понять, кого вытеснили
+    old_top3 = db.get_top_tg_ids("all", limit=3)
+
     db.add_transaction(user["id"], product, amount)
 
     group_chat_id = db.get_config("group_chat_id")
@@ -148,12 +152,51 @@ async def create_transaction(request: Request):
         except Exception:
             pass
 
+    # проверяем, не вылетел ли кто-то из топ-3 общего зачёта после этой продажи
+    new_top3 = db.get_top_tg_ids("all", limit=3)
+    dropped_out = [tg_id for tg_id in old_top3 if tg_id not in new_top3 and tg_id != user["id"]]
+    for tg_id in dropped_out:
+        try:
+            await bot.send_message(
+                tg_id,
+                "😤 Тебя обогнали! Ты вылетел(а) из топ-3 общего зачёта.\nОткрой приложение и вернись на пьедестал 🏆",
+            )
+        except Exception:
+            pass
+
     return {"ok": True}
 
 
 @app.get("/api/leaderboard")
 async def leaderboard(period: str = "all"):
     return db.get_leaderboard(period)
+
+
+@app.post("/api/me")
+async def me(request: Request):
+    body = await request.json()
+    user = validate_init_data(body.get("initData", ""))
+    stats = db.get_user_stats(user["id"])
+    if not stats:
+        # пользователь ещё не сохранён (например, первое открытие) — вернём пустую статистику
+        full_name = f"{user.get('first_name', '')} {user.get('last_name', '')}".strip()
+        db.upsert_user(user["id"], user.get("username"), full_name)
+        stats = db.get_user_stats(user["id"])
+    return stats
+
+
+@app.post("/api/goal")
+async def set_goal(request: Request):
+    body = await request.json()
+    user = validate_init_data(body.get("initData", ""))
+    try:
+        amount = float(body.get("amount"))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="Некорректная сумма")
+    if amount < 0:
+        raise HTTPException(status_code=400, detail="Сумма не может быть отрицательной")
+    db.set_monthly_goal(user["id"], amount)
+    return {"ok": True}
 
 
 app.mount("/webapp", StaticFiles(directory="webapp", html=True), name="webapp")

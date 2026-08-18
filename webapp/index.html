@@ -6,87 +6,295 @@
 <title>Продажи</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
-  :root { color-scheme: light dark; }
-  * { box-sizing: border-box; }
+  :root {
+    --bg: #0a0a0b;
+    --surface: #141416;
+    --surface-2: #1c1c1f;
+    --border: #232326;
+    --text: #f2f2f3;
+    --text-dim: #8a8a90;
+    --accent: #ffffff;
+    --accent-dim: #d4d4d8;
+    --gold: #d4af37;
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   body {
     margin: 0;
-    padding: 16px;
-    font-family: -apple-system, system-ui, sans-serif;
-    background: var(--tg-theme-bg-color, #ffffff);
-    color: var(--tg-theme-text-color, #111111);
+    padding: 16px 16px 88px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
   }
-  h1 { font-size: 17px; margin: 4px 0 12px; }
+  h1 {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin: 4px 0 12px;
+  }
+  .screen { display: none; }
+  .screen.active { display: block; animation: fade .15s ease; }
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
   .card {
-    background: var(--tg-theme-secondary-bg-color, #f4f4f5);
-    border-radius: 14px;
-    padding: 16px;
-    margin-bottom: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin-bottom: 16px;
   }
+
   input {
     width: 100%;
-    padding: 12px;
+    padding: 14px;
     margin-bottom: 10px;
-    border-radius: 10px;
-    border: 1px solid rgba(120,120,120,0.25);
+    border-radius: 12px;
+    border: 1px solid var(--border);
     font-size: 15px;
-    background: var(--tg-theme-bg-color, #ffffff);
-    color: var(--tg-theme-text-color, #111111);
+    background: var(--surface-2);
+    color: var(--text);
   }
-  button {
+  input::placeholder { color: var(--text-dim); }
+  input:focus { outline: none; border-color: var(--accent-dim); }
+
+  button.primary {
     width: 100%;
-    padding: 13px;
+    padding: 14px;
     border: none;
-    border-radius: 10px;
-    background: var(--tg-theme-button-color, #2481cc);
-    color: var(--tg-theme-button-text-color, #ffffff);
+    border-radius: 12px;
+    background: var(--accent);
+    color: #0a0a0b;
     font-size: 15px;
     font-weight: 600;
   }
-  .tabs { display: flex; gap: 8px; margin-bottom: 10px; }
+  button.primary:active { opacity: 0.85; }
+
+  #status { font-size: 13px; margin-top: 8px; min-height: 16px; color: var(--text-dim); text-align: center; }
+
+  .tabs { display: flex; gap: 6px; margin-bottom: 14px; }
   .tab {
     flex: 1;
     text-align: center;
-    padding: 8px;
-    border-radius: 8px;
-    background: var(--tg-theme-bg-color, #ffffff);
-    font-size: 13px;
+    padding: 9px 4px;
+    border-radius: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 12.5px;
+    font-weight: 500;
     cursor: pointer;
   }
-  .tab.active { background: var(--tg-theme-button-color, #2481cc); color: var(--tg-theme-button-text-color, #fff); }
-  .row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(120,120,120,0.15); }
+  .tab.active { background: var(--text); color: #0a0a0b; border-color: var(--text); }
+
+  .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
   .row:last-child { border-bottom: none; }
-  .rank { font-weight: 700; width: 22px; opacity: 0.7; }
-  .name { flex: 1; margin-left: 8px; }
-  .total { font-weight: 700; }
-  #status { font-size: 13px; margin-top: 6px; min-height: 16px; opacity: 0.8; }
-  .empty { text-align: center; opacity: 0.6; padding: 8px 0; }
+  .rank {
+    font-weight: 700;
+    width: 26px;
+    color: var(--text-dim);
+    font-size: 13px;
+  }
+  .rank.top { color: var(--gold); }
+  .name { flex: 1; margin-left: 10px; font-size: 14.5px; }
+  .total { font-weight: 700; font-size: 14.5px; font-variant-numeric: tabular-nums; }
+  .empty { text-align: center; color: var(--text-dim); padding: 20px 0; font-size: 14px; }
+
+  /* Статистика */
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .stat-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+  .stat-label { font-size: 11.5px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 6px; }
+  .stat-value { font-size: 21px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stat-sub { font-size: 12px; color: var(--text-dim); margin-top: 3px; }
+
+  .rank-banner {
+    background: linear-gradient(135deg, #1c1c1f, #101012);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    text-align: center;
+    margin-bottom: 16px;
+  }
+  .rank-banner .big { font-size: 30px; font-weight: 800; color: var(--gold); }
+  .rank-banner .sub { font-size: 12.5px; color: var(--text-dim); margin-top: 4px; }
+
+  .streak-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 16px;
+  }
+  .streak-fire { font-size: 26px; }
+  .streak-value { font-size: 15px; font-weight: 700; }
+  .streak-sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+
+  .goal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  #goal-edit-link { font-size: 12px; color: var(--text-dim); text-decoration: underline; cursor: pointer; }
+  .progress-track {
+    width: 100%;
+    height: 10px;
+    background: var(--surface-2);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--text);
+    border-radius: 999px;
+    transition: width .3s ease;
+  }
+
+  /* Нижняя навигация */
+  .navbar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    display: flex;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+    gap: 4px;
+  }
+  .navbtn {
+    flex: 1;
+    text-align: center;
+    padding: 8px 0 4px;
+    border-radius: 12px;
+    color: var(--text-dim);
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .navbtn .icon { font-size: 19px; display: block; margin-bottom: 2px; }
+  .navbtn.active { color: var(--text); background: var(--surface-2); }
 </style>
 </head>
 <body>
-  <h1>💸 Внести продажу</h1>
-  <div class="card">
-    <input id="product" placeholder="Что продали?" />
-    <input id="amount" type="number" inputmode="decimal" placeholder="Сумма, ₽" />
-    <button onclick="submitTx()">Добавить</button>
-    <div id="status"></div>
+
+  <!-- Экран: добавить продажу -->
+  <div class="screen active" id="screen-add">
+    <h1>Внести продажу</h1>
+    <div class="card">
+      <input id="product" placeholder="Что продали?" />
+      <input id="amount" type="number" inputmode="decimal" placeholder="Сумма, ₽" />
+      <button class="primary" onclick="submitTx()">Добавить</button>
+      <div id="status"></div>
+    </div>
   </div>
 
-  <h1>🏆 Таблица лидеров</h1>
-  <div class="tabs">
-    <div class="tab active" data-period="day">День</div>
-    <div class="tab" data-period="week">Неделя</div>
-    <div class="tab" data-period="month">Месяц</div>
-    <div class="tab" data-period="all">Всё время</div>
+  <!-- Экран: моя статистика -->
+  <div class="screen" id="screen-stats">
+    <h1>Моя статистика</h1>
+    <div class="rank-banner">
+      <div class="big" id="stat-rank">—</div>
+      <div class="sub" id="stat-rank-sub">место в общем зачёте</div>
+    </div>
+
+    <div class="streak-card" id="streak-card">
+      <div class="streak-fire">🔥</div>
+      <div>
+        <div class="streak-value" id="stat-streak">0 дней подряд</div>
+        <div class="streak-sub">не пропускай ни дня</div>
+      </div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-box">
+        <div class="stat-label">Сегодня</div>
+        <div class="stat-value" id="stat-day">0₽</div>
+        <div class="stat-sub" id="stat-day-count">0 продаж</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">За неделю</div>
+        <div class="stat-value" id="stat-week">0₽</div>
+        <div class="stat-sub" id="stat-week-count">0 продаж</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">За месяц</div>
+        <div class="stat-value" id="stat-month">0₽</div>
+        <div class="stat-sub" id="stat-month-count">0 продаж</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Всего</div>
+        <div class="stat-value" id="stat-all">0₽</div>
+        <div class="stat-sub" id="stat-all-count">0 продаж</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="goal-header">
+        <span class="stat-label" style="margin:0">Цель на месяц</span>
+        <span id="goal-edit-link" onclick="toggleGoalEdit()">изменить</span>
+      </div>
+      <div id="goal-display">
+        <div class="progress-track">
+          <div class="progress-fill" id="goal-progress-fill" style="width:0%"></div>
+        </div>
+        <div class="stat-sub" id="goal-progress-text">Цель не задана</div>
+      </div>
+      <div id="goal-edit" style="display:none; margin-top:10px;">
+        <input id="goal-input" type="number" inputmode="decimal" placeholder="Например, 100000" />
+        <button class="primary" onclick="saveGoal()">Сохранить цель</button>
+      </div>
+    </div>
   </div>
-  <div class="card" id="leaderboard"></div>
+
+  <!-- Экран: таблица лидеров -->
+  <div class="screen" id="screen-leaders">
+    <h1>Таблица лидеров</h1>
+    <div class="tabs">
+      <div class="tab active" data-period="day">День</div>
+      <div class="tab" data-period="week">Неделя</div>
+      <div class="tab" data-period="month">Месяц</div>
+      <div class="tab" data-period="all">Всё время</div>
+    </div>
+    <div class="card" id="leaderboard"></div>
+  </div>
+
+  <div class="navbar">
+    <div class="navbtn active" data-screen="add"><span class="icon">＋</span>Добавить</div>
+    <div class="navbtn" data-screen="stats"><span class="icon">◆</span>Статистика</div>
+    <div class="navbtn" data-screen="leaders"><span class="icon">▲</span>Лидеры</div>
+  </div>
 
 <script>
 const tg = window.Telegram.WebApp;
 tg.ready();
 tg.expand();
+if (tg.setHeaderColor) tg.setHeaderColor("#0a0a0b");
+if (tg.setBackgroundColor) tg.setBackgroundColor("#0a0a0b");
 
 let currentPeriod = "day";
 
+// --- Навигация между экранами ---
+document.querySelectorAll(".navbtn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".navbtn").forEach((b) => b.classList.remove("active"));
+    document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("screen-" + btn.dataset.screen).classList.add("active");
+    if (btn.dataset.screen === "stats") loadStats();
+    if (btn.dataset.screen === "leaders") loadLeaderboard();
+  });
+});
+
+// --- Добавление продажи ---
 async function submitTx() {
   const productEl = document.getElementById("product");
   const amountEl = document.getElementById("amount");
@@ -108,14 +316,90 @@ async function submitTx() {
     if (!res.ok) throw new Error(await res.text());
     productEl.value = "";
     amountEl.value = "";
-    status.textContent = "✅ Добавлено!";
+    status.textContent = "✅ Добавлено";
     if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
-    loadLeaderboard();
   } catch (e) {
     status.textContent = "Ошибка: не получилось отправить";
   }
 }
 
+// --- Моя статистика ---
+let currentGoal = 0;
+
+async function loadStats() {
+  try {
+    const res = await fetch("/api/me", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ initData: tg.initData }),
+    });
+    const s = await res.json();
+    document.getElementById("stat-day").textContent = Math.round(s.day.total) + "₽";
+    document.getElementById("stat-day-count").textContent = s.day.count + " продаж";
+    document.getElementById("stat-week").textContent = Math.round(s.week.total) + "₽";
+    document.getElementById("stat-week-count").textContent = s.week.count + " продаж";
+    document.getElementById("stat-month").textContent = Math.round(s.month.total) + "₽";
+    document.getElementById("stat-month-count").textContent = s.month.count + " продаж";
+    document.getElementById("stat-all").textContent = Math.round(s.all.total) + "₽";
+    document.getElementById("stat-all-count").textContent = s.all.count + " продаж";
+
+    if (s.rank) {
+      document.getElementById("stat-rank").textContent = "#" + s.rank;
+      document.getElementById("stat-rank-sub").textContent = `место из ${s.total_workers} в общем зачёте`;
+    } else {
+      document.getElementById("stat-rank").textContent = "—";
+      document.getElementById("stat-rank-sub").textContent = "ещё нет продаж";
+    }
+
+    const streakEl = document.getElementById("stat-streak");
+    streakEl.textContent = s.streak === 1 ? "1 день подряд" : `${s.streak} дней подряд`;
+
+    currentGoal = s.monthly_goal || 0;
+    updateGoalDisplay(s.month.total, currentGoal);
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+function updateGoalDisplay(monthTotal, goal) {
+  const fill = document.getElementById("goal-progress-fill");
+  const text = document.getElementById("goal-progress-text");
+  if (!goal) {
+    fill.style.width = "0%";
+    text.textContent = "Цель не задана — нажми «изменить»";
+    return;
+  }
+  const percent = Math.min(100, Math.round((monthTotal / goal) * 100));
+  fill.style.width = percent + "%";
+  text.textContent = `${Math.round(monthTotal)}₽ из ${Math.round(goal)}₽ (${percent}%)`;
+}
+
+function toggleGoalEdit() {
+  const editBlock = document.getElementById("goal-edit");
+  const input = document.getElementById("goal-input");
+  const isHidden = editBlock.style.display === "none";
+  editBlock.style.display = isHidden ? "block" : "none";
+  if (isHidden) input.value = currentGoal || "";
+}
+
+async function saveGoal() {
+  const input = document.getElementById("goal-input");
+  const amount = input.value;
+  if (!amount || Number(amount) < 0) return;
+  try {
+    await fetch("/api/goal", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ initData: tg.initData, amount }),
+    });
+    document.getElementById("goal-edit").style.display = "none";
+    loadStats();
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+// --- Таблица лидеров ---
 async function loadLeaderboard() {
   const el = document.getElementById("leaderboard");
   el.innerHTML = "<div class='empty'>Загрузка...</div>";
@@ -127,14 +411,15 @@ async function loadLeaderboard() {
       return;
     }
     el.innerHTML = data
-      .map(
-        (r, i) => `
+      .map((r, i) => {
+        const rankClass = i < 3 ? "rank top" : "rank";
+        return `
       <div class="row">
-        <span class="rank">${i + 1}</span>
+        <span class="${rankClass}">${i + 1}</span>
         <span class="name">${r.full_name || r.username || "Без имени"}</span>
         <span class="total">${Math.round(r.total)}₽</span>
-      </div>`
-      )
+      </div>`;
+      })
       .join("");
   } catch (e) {
     el.innerHTML = "<div class='empty'>Не удалось загрузить</div>";
@@ -149,8 +434,6 @@ document.querySelectorAll(".tab").forEach((tab) => {
     loadLeaderboard();
   });
 });
-
-loadLeaderboard();
 </script>
 </body>
 </html>
