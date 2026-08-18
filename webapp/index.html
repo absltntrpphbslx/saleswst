@@ -7,231 +7,309 @@
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
   :root {
-    --bg: #0a0a0b;
-    --surface: #141416;
-    --surface-2: #1c1c1f;
-    --border: #232326;
-    --text: #f2f2f3;
-    --text-dim: #8a8a90;
-    --accent: #ffffff;
-    --accent-dim: #d4d4d8;
-    --gold: #d4af37;
-    --radius: 16px;
+    --bg: #08080a;
+    --surface: #131316;
+    --surface-2: #1c1c20;
+    --surface-3: #232328;
+    --border: rgba(255,255,255,0.07);
+    --border-strong: rgba(255,255,255,0.14);
+    --text: #f5f5f7;
+    --text-dim: #8c8c93;
+    --text-faint: #5c5c62;
+    --accent: #8b7bff;
+    --accent-2: #6f5cf0;
+    --gold: #e0b33e;
+    --danger: #ff6b6b;
+    --radius-lg: 20px;
+    --radius-md: 14px;
+    --radius-sm: 10px;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   body {
     margin: 0;
-    padding: 16px 16px 88px;
+    padding: 20px 16px 96px;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-    background: var(--bg);
+    background:
+      radial-gradient(circle at 15% 0%, rgba(139,123,255,0.10), transparent 45%),
+      var(--bg);
     color: var(--text);
     min-height: 100vh;
+    letter-spacing: -0.01em;
   }
-  h1 {
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
+
+  .header { margin-bottom: 20px; }
+  .header .greet { font-size: 21px; font-weight: 700; }
+  .header .sub { font-size: 13px; color: var(--text-dim); margin-top: 3px; }
+
+  .eyebrow {
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--text-dim);
-    margin: 4px 0 12px;
+    color: var(--text-faint);
+    margin: 0 0 10px 2px;
   }
+
   .screen { display: none; }
-  .screen.active { display: block; animation: fade .15s ease; }
-  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+  .screen.active { display: block; animation: rise .22s cubic-bezier(.2,.9,.3,1); }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
   .card {
-    background: var(--surface);
+    background: linear-gradient(180deg, var(--surface), rgba(19,19,22,0.6));
     border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 18px;
+    border-radius: var(--radius-lg);
+    padding: 20px;
     margin-bottom: 16px;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.02) inset;
+  }
+
+  .field-label {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin: 0 2px 6px;
+    font-weight: 500;
   }
 
   input, select {
     width: 100%;
-    padding: 14px;
-    margin-bottom: 10px;
-    border-radius: 12px;
+    padding: 14px 15px;
+    margin-bottom: 14px;
+    border-radius: var(--radius-md);
     border: 1px solid var(--border);
     font-size: 15px;
     background: var(--surface-2);
     color: var(--text);
     font-family: inherit;
+    transition: border-color .15s ease, background .15s ease;
   }
-  select { appearance: none; -webkit-appearance: none; }
-  input::placeholder { color: var(--text-dim); }
-  input:focus, select:focus { outline: none; border-color: var(--accent-dim); }
+  input:last-of-type, select:last-of-type { margin-bottom: 0; }
+  input::placeholder { color: var(--text-faint); }
+  input:focus, select:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: var(--surface-3);
+  }
+  .field-group { margin-bottom: 14px; }
+  .field-group input, .field-group select { margin-bottom: 0; }
 
   button.primary {
     width: 100%;
-    padding: 14px;
+    padding: 15px;
     border: none;
-    border-radius: 12px;
-    background: var(--accent);
-    color: #0a0a0b;
+    border-radius: var(--radius-md);
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #fff;
     font-size: 15px;
-    font-weight: 600;
+    font-weight: 700;
+    margin-top: 16px;
+    box-shadow: 0 6px 16px -6px rgba(139,123,255,0.55);
   }
-  button.primary:active { opacity: 0.85; }
+  button.primary:active { transform: scale(0.985); opacity: 0.92; }
 
-  #status { font-size: 13px; margin-top: 8px; min-height: 16px; color: var(--text-dim); text-align: center; }
+  #status {
+    font-size: 13px;
+    margin-top: 10px;
+    min-height: 16px;
+    text-align: center;
+    color: var(--text-dim);
+    font-weight: 500;
+  }
+  #status.success { color: #6fe08a; }
+  #status.error { color: var(--danger); }
 
-  .tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 4px; }
   .tab {
     flex: 1;
     text-align: center;
     padding: 9px 4px;
-    border-radius: 10px;
-    background: var(--surface);
-    border: 1px solid var(--border);
+    border-radius: 999px;
     color: var(--text-dim);
     font-size: 12.5px;
-    font-weight: 500;
+    font-weight: 600;
     cursor: pointer;
+    transition: all .15s ease;
   }
-  .tab.active { background: var(--text); color: #0a0a0b; border-color: var(--text); }
+  .tab.active { background: var(--text); color: #0a0a0b; }
 
   .row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 0;
+    padding: 13px 2px;
     border-bottom: 1px solid var(--border);
   }
   .row:last-child { border-bottom: none; }
   .rank {
     font-weight: 700;
-    width: 26px;
+    width: 28px;
+    height: 28px;
+    line-height: 28px;
+    text-align: center;
+    border-radius: 8px;
     color: var(--text-dim);
     font-size: 13px;
+    background: var(--surface-2);
   }
-  .rank.top { color: var(--gold); }
-  .name { flex: 1; margin-left: 10px; font-size: 14.5px; }
+  .rank.top { color: #14140f; background: var(--gold); }
+  .name { flex: 1; margin-left: 12px; font-size: 14.5px; font-weight: 500; }
   .total { font-weight: 700; font-size: 14.5px; font-variant-numeric: tabular-nums; }
-  .empty { text-align: center; color: var(--text-dim); padding: 20px 0; font-size: 14px; }
+  .empty { text-align: center; color: var(--text-faint); padding: 26px 0; font-size: 14px; }
 
   /* Статистика */
-  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
-  .stat-box {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 16px;
-  }
-  .stat-label { font-size: 11.5px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 6px; }
-  .stat-value { font-size: 21px; font-weight: 700; font-variant-numeric: tabular-nums; }
-  .stat-sub { font-size: 12px; color: var(--text-dim); margin-top: 3px; }
-
   .rank-banner {
-    background: linear-gradient(135deg, #1c1c1f, #101012);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 18px;
+    position: relative;
+    background: linear-gradient(135deg, #1a1a1f, #0d0d10);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-lg);
+    padding: 22px;
     text-align: center;
     margin-bottom: 16px;
+    overflow: hidden;
   }
-  .rank-banner .big { font-size: 30px; font-weight: 800; color: var(--gold); }
-  .rank-banner .sub { font-size: 12.5px; color: var(--text-dim); margin-top: 4px; }
+  .rank-banner::before {
+    content: "";
+    position: absolute; inset: 0;
+    background: radial-gradient(circle at 50% -20%, rgba(224,179,62,0.18), transparent 60%);
+  }
+  .rank-banner .big { position: relative; font-size: 34px; font-weight: 800; color: var(--gold); letter-spacing: -0.02em; }
+  .rank-banner .sub { position: relative; font-size: 12.5px; color: var(--text-dim); margin-top: 4px; }
 
   .streak-card {
     display: flex;
     align-items: center;
-    gap: 12px;
-    background: var(--surface);
+    gap: 14px;
+    background: linear-gradient(135deg, rgba(255,138,61,0.10), var(--surface));
     border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 14px 16px;
+    border-radius: var(--radius-lg);
+    padding: 16px 18px;
     margin-bottom: 16px;
   }
-  .streak-fire { font-size: 26px; }
+  .streak-fire { font-size: 28px; filter: drop-shadow(0 2px 6px rgba(255,138,61,0.4)); }
   .streak-value { font-size: 15px; font-weight: 700; }
   .streak-sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
 
-  .goal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-  #goal-edit-link { font-size: 12px; color: var(--text-dim); text-decoration: underline; cursor: pointer; }
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .stat-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 16px;
+  }
+  .stat-label { font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 7px; font-weight: 600; }
+  .stat-value { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+  .stat-sub { font-size: 12px; color: var(--text-dim); margin-top: 3px; }
+
+  .goal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .goal-header .field-label { margin: 0; }
+  #goal-edit-link {
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 600;
+    cursor: pointer;
+    padding: 5px 10px;
+    background: rgba(139,123,255,0.12);
+    border-radius: 999px;
+  }
   .progress-track {
     width: 100%;
     height: 10px;
     background: var(--surface-2);
     border-radius: 999px;
     overflow: hidden;
-    margin-bottom: 8px;
+    margin-bottom: 9px;
   }
   .progress-fill {
     height: 100%;
-    background: var(--text);
+    background: linear-gradient(90deg, var(--accent-2), var(--accent));
     border-radius: 999px;
-    transition: width .3s ease;
+    transition: width .4s cubic-bezier(.2,.9,.3,1);
   }
+  #goal-edit { margin-top: 4px; }
+
 
   /* Клиенты */
-  .search-row { display: flex; gap: 8px; }
-  .search-row input { margin-bottom: 0; }
-  .search-row button { width: auto; min-width: 92px; padding: 0 16px; }
-  .buyer-head { margin-bottom: 14px; }
-  .buyer-name { font-size: 17px; font-weight: 700; }
-  .buyer-total { font-size: 25px; font-weight: 800; margin-top: 5px; }
-  .buyer-meta { color: var(--text-dim); font-size: 12.5px; margin-top: 3px; }
-  .history-item { padding: 12px 0; border-bottom: 1px solid var(--border); }
-  .history-item:last-child { border-bottom: none; }
-  .history-top { display: flex; justify-content: space-between; gap: 10px; }
-  .history-product { font-size: 14px; font-weight: 600; }
-  .history-amount { font-size: 14px; font-weight: 700; white-space: nowrap; }
-  .history-bottom { display: flex; gap: 8px; margin-top: 4px; color: var(--text-dim); font-size: 11.5px; }
-
-  /* Настройки владельца */
-  .setting-title { font-size: 15px; font-weight: 650; margin-bottom: 5px; }
-  .setting-help { font-size: 12px; line-height: 1.4; color: var(--text-dim); margin-bottom: 10px; }
-  .settings-status { text-align: center; min-height: 18px; margin-top: 10px; font-size: 13px; color: var(--text-dim); }
-  .owner-badge { display: inline-block; padding: 5px 8px; border-radius: 8px; background: var(--surface-2); color: var(--text-dim); font-size: 11px; margin-bottom: 12px; }
+  .search-row { display:flex; gap:8px; align-items:stretch; }
+  .search-row input { margin-bottom:0; flex:1; }
+  .search-btn { border:1px solid var(--border); background:var(--surface-2); color:var(--text); border-radius:var(--radius-md); padding:0 16px; font-weight:700; }
+  .buyer-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
+  .buyer-name { font-size:18px; font-weight:800; }
+  .buyer-total { font-size:22px; font-weight:800; color:var(--gold); }
+  .buyer-meta { font-size:12px; color:var(--text-dim); margin-top:3px; }
+  .history-item { padding:13px 0; border-bottom:1px solid var(--border); }
+  .history-item:last-child { border-bottom:none; padding-bottom:0; }
+  .history-top { display:flex; justify-content:space-between; gap:10px; font-size:14px; font-weight:600; }
+  .history-sub { margin-top:5px; display:flex; justify-content:space-between; gap:10px; color:var(--text-dim); font-size:12px; }
+  .settings-note { color:var(--text-dim); font-size:12px; line-height:1.45; margin-top:10px; }
 
   /* Нижняя навигация */
   .navbar {
     position: fixed;
-    bottom: 0; left: 0; right: 0;
+    bottom: 12px; left: 16px; right: 16px;
     display: flex;
-    background: var(--surface);
-    border-top: 1px solid var(--border);
-    padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+    background: rgba(19,19,22,0.92);
+    backdrop-filter: blur(14px);
+    border: 1px solid var(--border-strong);
+    border-radius: 20px;
+    padding: 6px;
     gap: 4px;
+    box-shadow: 0 10px 30px -10px rgba(0,0,0,0.6);
   }
   .navbtn {
     flex: 1;
     text-align: center;
-    padding: 8px 0 4px;
-    border-radius: 12px;
-    color: var(--text-dim);
-    font-size: 11px;
+    padding: 9px 0 7px;
+    border-radius: 14px;
+    color: var(--text-faint);
+    font-size: 10px;
+    font-weight: 600;
     cursor: pointer;
+    transition: all .15s ease;
   }
-  .navbtn .icon { font-size: 19px; display: block; margin-bottom: 2px; }
-  .navbtn.active { color: var(--text); background: var(--surface-2); }
+  .navbtn .icon { font-size: 18px; display: block; margin-bottom: 3px; }
+  .navbtn.active { color: var(--text); background: var(--surface-3); }
 </style>
 </head>
 <body>
 
+  <div class="header">
+    <div class="greet" id="greet">Привет 👋</div>
+    <div class="sub">Вноси продажи и следи за прогрессом</div>
+  </div>
+
   <!-- Экран: добавить продажу -->
   <div class="screen active" id="screen-add">
-    <h1>Внести продажу</h1>
+    <div class="eyebrow">Новая продажа</div>
     <div class="card">
-      <select id="category">
-        <option value="">Категория (необязательно)</option>
-        <option value="Robux">Robux</option>
-        <option value="Реферальная ссылка">Реферальная ссылка</option>
-        <option value="Аккаунт">Аккаунт</option>
-        <option value="Другое">Другое</option>
-      </select>
-      <input id="product" placeholder="Что именно продано? (например: 800 Robux)" />
-      <input id="buyer" placeholder="Юзернейм покупателя (необязательно)" />
-      <input id="amount" type="number" inputmode="decimal" placeholder="Сумма, ₽" />
-      <button class="primary" onclick="submitTx()">Добавить</button>
+      <div class="field-group">
+        <div class="field-label">Категория</div>
+        <input id="category" list="category-suggestions" placeholder="Например: Robux, Реферальная ссылка..." />
+        <datalist id="category-suggestions">
+          <option value="Robux">
+          <option value="Реферальная ссылка">
+          <option value="Аккаунт">
+          <option value="Игровой предмет">
+        </datalist>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Что именно продано</div>
+        <input id="product" placeholder="Например: 800 Robux" />
+      </div>
+      <div class="field-group">
+        <div class="field-label">Юзернейм покупателя (необязательно)</div>
+        <input id="buyer" placeholder="username" />
+      </div>
+      <div class="field-group">
+        <div class="field-label">Сумма</div>
+        <input id="amount" type="number" inputmode="decimal" placeholder="0 ₽" />
+      </div>
+      <button class="primary" onclick="submitTx()">Добавить продажу</button>
       <div id="status"></div>
     </div>
   </div>
 
   <!-- Экран: моя статистика -->
   <div class="screen" id="screen-stats">
-    <h1>Моя статистика</h1>
+    <div class="eyebrow">Моя статистика</div>
     <div class="rank-banner">
       <div class="big" id="stat-rank">—</div>
       <div class="sub" id="stat-rank-sub">место в общем зачёте</div>
@@ -270,7 +348,7 @@
 
     <div class="card">
       <div class="goal-header">
-        <span class="stat-label" style="margin:0">Цель на месяц</span>
+        <span class="field-label">Цель на месяц</span>
         <span id="goal-edit-link" onclick="toggleGoalEdit()">изменить</span>
       </div>
       <div id="goal-display">
@@ -279,16 +357,16 @@
         </div>
         <div class="stat-sub" id="goal-progress-text">Цель не задана</div>
       </div>
-      <div id="goal-edit" style="display:none; margin-top:10px;">
+      <div id="goal-edit" style="display:none;">
         <input id="goal-input" type="number" inputmode="decimal" placeholder="Например, 100000" />
-        <button class="primary" onclick="saveGoal()">Сохранить цель</button>
+        <button class="primary" onclick="saveGoal()" style="margin-top:10px;">Сохранить цель</button>
       </div>
     </div>
   </div>
 
   <!-- Экран: таблица лидеров -->
   <div class="screen" id="screen-leaders">
-    <h1>Таблица лидеров</h1>
+    <div class="eyebrow">Таблица лидеров</div>
     <div class="tabs">
       <div class="tab active" data-period="day">День</div>
       <div class="tab" data-period="week">Неделя</div>
@@ -298,35 +376,36 @@
     <div class="card" id="leaderboard"></div>
   </div>
 
+
   <!-- Экран: клиенты -->
-  <div class="screen" id="screen-buyers">
-    <h1>Клиенты</h1>
+  <div class="screen" id="screen-clients">
+    <div class="eyebrow">Клиенты</div>
     <div class="card">
+      <div class="field-label">Поиск по юзернейму покупателя</div>
       <div class="search-row">
-        <input id="buyer-search" placeholder="@username покупателя" autocomplete="off" />
-        <button class="primary" onclick="searchBuyer()">Найти</button>
+        <input id="buyer-search" placeholder="@username" autocomplete="off" />
+        <button class="search-btn" onclick="searchBuyer()">Найти</button>
       </div>
-      <div id="buyer-status"></div>
+      <div id="buyer-status" class="status-text"></div>
     </div>
-    <div class="card" id="buyer-result" style="display:none"></div>
+    <div class="card" id="buyer-result" style="display:none;"></div>
   </div>
 
   <!-- Экран: настройки владельца -->
   <div class="screen" id="screen-settings">
-    <h1>Настройки</h1>
+    <div class="eyebrow">Настройки</div>
     <div class="card">
-      <div class="owner-badge">🔐 Только владелец</div>
-
-      <div class="setting-title">Комиссия воркера</div>
-      <div class="setting-help">Сколько процентов от каждой продажи получает воркер.</div>
-      <input id="commission-input" type="number" inputmode="decimal" min="1" max="100" placeholder="70" />
-
-      <div class="setting-title">Порог крупной сделки</div>
-      <div class="setting-help">При достижении клиентом этой суммы бот отправит в общий чат анонимное уведомление.</div>
-      <input id="milestone-input" type="number" inputmode="decimal" min="1" placeholder="50000" />
-
-      <button class="primary" onclick="saveSettings()">Сохранить</button>
-      <div class="settings-status" id="settings-status"></div>
+      <div class="field-group">
+        <div class="field-label">Комиссия воркера, %</div>
+        <input id="settings-commission" type="number" min="1" max="100" step="0.1" placeholder="Например: 70" />
+      </div>
+      <div class="field-group">
+        <div class="field-label">Порог крупной сделки, ₽</div>
+        <input id="settings-milestone" type="number" min="1" step="1" placeholder="Например: 50000" />
+      </div>
+      <button class="primary" onclick="saveSettings()">Сохранить настройки</button>
+      <div id="settings-status" class="status-text"></div>
+      <div class="settings-note">Настройки доступны только владельцу. Проверка выполняется на сервере, поэтому воркер не сможет изменить их даже прямым запросом к API.</div>
     </div>
   </div>
 
@@ -334,29 +413,50 @@
     <div class="navbtn active" data-screen="add"><span class="icon">＋</span>Добавить</div>
     <div class="navbtn" data-screen="stats"><span class="icon">◆</span>Статистика</div>
     <div class="navbtn" data-screen="leaders"><span class="icon">▲</span>Лидеры</div>
-    <div class="navbtn" data-screen="buyers"><span class="icon">♙</span>Клиенты</div>
-    <div class="navbtn" data-screen="settings" id="settings-nav" style="display:none"><span class="icon">⚙</span>Настройки</div>
+    <div class="navbtn" data-screen="clients"><span class="icon">♙</span>Клиенты</div>
+    <div class="navbtn" id="settings-nav" data-screen="settings" style="display:none"><span class="icon">⚙</span>Настройки</div>
   </div>
 
 <script>
 const tg = window.Telegram.WebApp;
 tg.ready();
 tg.expand();
-if (tg.setHeaderColor) tg.setHeaderColor("#0a0a0b");
-if (tg.setBackgroundColor) tg.setBackgroundColor("#0a0a0b");
+if (tg.setHeaderColor) tg.setHeaderColor("#08080a");
+if (tg.setBackgroundColor) tg.setBackgroundColor("#08080a");
+
+const tgUser = tg.initDataUnsafe && tg.initDataUnsafe.user;
+if (tgUser && tgUser.first_name) {
+  document.getElementById("greet").textContent = `Привет, ${tgUser.first_name} 👋`;
+}
 
 let currentPeriod = "day";
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function setStatus(id, text, type = "") {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  el.className = type ? `status-text ${type}` : "status-text";
+}
+
 // --- Навигация между экранами ---
 document.querySelectorAll(".navbtn").forEach((btn) => {
-  btn.addEventListener("click", async () => {
-    if (btn.dataset.screen === "settings" && btn.style.display === "none") return;
+  btn.addEventListener("click", () => {
     document.querySelectorAll(".navbtn").forEach((b) => b.classList.remove("active"));
-    document.querySelectorAll(".screen").forEach((screen) => screen.classList.remove("active"));
+    document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
     btn.classList.add("active");
     document.getElementById("screen-" + btn.dataset.screen).classList.add("active");
     if (btn.dataset.screen === "stats") loadStats();
     if (btn.dataset.screen === "leaders") loadLeaderboard();
+    if (btn.dataset.screen === "clients") clearBuyerResult();
     if (btn.dataset.screen === "settings") loadSettings();
   });
 });
@@ -368,13 +468,15 @@ async function submitTx() {
   const buyerEl = document.getElementById("buyer");
   const amountEl = document.getElementById("amount");
   const status = document.getElementById("status");
-  const category = categoryEl.value;
+  const category = categoryEl.value.trim();
   const product = productEl.value.trim();
   const buyer_username = buyerEl.value.trim().replace(/^@/, "");
   const amount = amountEl.value;
 
+  status.className = "";
   if (!product || !amount) {
     status.textContent = "Заполни оба поля";
+    status.className = "error";
     return;
   }
   status.textContent = "Отправка...";
@@ -390,9 +492,11 @@ async function submitTx() {
     amountEl.value = "";
     categoryEl.value = "";
     status.textContent = "✅ Добавлено";
+    status.className = "success";
     if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
   } catch (e) {
     status.textContent = "Ошибка: не получилось отправить";
+    status.className = "error";
   }
 }
 
@@ -407,6 +511,8 @@ async function loadStats() {
       body: JSON.stringify({ initData: tg.initData }),
     });
     const s = await res.json();
+    const settingsNav = document.getElementById("settings-nav");
+    if (settingsNav) settingsNav.style.display = s.is_admin ? "block" : "none";
     document.getElementById("stat-day").textContent = Math.round(s.day.total) + "₽";
     document.getElementById("stat-day-count").textContent = s.day.count + " продаж";
     document.getElementById("stat-week").textContent = Math.round(s.week.total) + "₽";
@@ -472,16 +578,130 @@ async function saveGoal() {
   }
 }
 
+// --- Клиенты ---
+function clearBuyerResult() {
+  const result = document.getElementById("buyer-result");
+  if (result) result.style.display = "none";
+  setStatus("buyer-status", "");
+}
+
+async function searchBuyer() {
+  const input = document.getElementById("buyer-search");
+  const username = input.value.trim().replace(/^@/, "");
+  const result = document.getElementById("buyer-result");
+  if (!username) {
+    setStatus("buyer-status", "Введи юзернейм покупателя", "error");
+    return;
+  }
+  setStatus("buyer-status", "Ищу...");
+  result.style.display = "none";
+  try {
+    const res = await fetch("/api/buyer", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ initData: tg.initData, username }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    if (!data.count) {
+      setStatus("buyer-status", `У @${username} пока нет зафиксированных покупок`, "error");
+      return;
+    }
+    result.style.display = "block";
+    result.innerHTML = `
+      <div class="buyer-head">
+        <div>
+          <div class="buyer-name">@${escapeHtml(data.username)}</div>
+          <div class="buyer-meta">Покупок: ${data.count}</div>
+        </div>
+        <div class="buyer-total">${Math.round(data.total)}₽</div>
+      </div>
+      <div class="field-label">История покупок</div>
+      ${data.items.map(item => `
+        <div class="history-item">
+          <div class="history-top">
+            <span>${escapeHtml(item.product)}</span>
+            <span>${Math.round(item.amount)}₽</span>
+          </div>
+          <div class="history-sub">
+            <span>${escapeHtml(item.category || "Без категории")}</span>
+            <span>${escapeHtml(item.created_at || "")}</span>
+          </div>
+        </div>
+      `).join("")}
+    `;
+    setStatus("buyer-status", "");
+  } catch (e) {
+    console.error(e);
+    setStatus("buyer-status", "Не удалось найти покупателя", "error");
+  }
+}
+
+document.getElementById("buyer-search").addEventListener("keydown", (event) => {
+  if (event.key === "Enter") searchBuyer();
+});
+
+// --- Настройки владельца ---
+async function loadSettings() {
+  setStatus("settings-status", "Загрузка...");
+  try {
+    const res = await fetch("/api/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ initData: tg.initData }),
+    });
+    if (res.status === 403) {
+      document.getElementById("settings-nav").style.display = "none";
+      document.getElementById("screen-add").classList.add("active");
+      document.querySelector('[data-screen="add"]').classList.add("active");
+      document.getElementById("screen-settings").classList.remove("active");
+      setStatus("settings-status", "");
+      return;
+    }
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    document.getElementById("settings-commission").value = data.commission ?? "";
+    document.getElementById("settings-milestone").value = data.milestone ?? "50000";
+    setStatus("settings-status", "");
+  } catch (e) {
+    console.error(e);
+    setStatus("settings-status", "Не удалось загрузить настройки", "error");
+  }
+}
+
+async function saveSettings() {
+  const commission = document.getElementById("settings-commission").value;
+  const milestone = document.getElementById("settings-milestone").value;
+  if (!commission || Number(commission) <= 0 || Number(commission) > 100) {
+    setStatus("settings-status", "Комиссия должна быть от 1 до 100%", "error");
+    return;
+  }
+  if (!milestone || Number(milestone) <= 0) {
+    setStatus("settings-status", "Порог должен быть больше нуля", "error");
+    return;
+  }
+  setStatus("settings-status", "Сохраняю...");
+  try {
+    const res = await fetch("/api/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ initData: tg.initData, action: "save", commission, milestone }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    setStatus("settings-status", "✅ Настройки сохранены", "success");
+    if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+  } catch (e) {
+    console.error(e);
+    setStatus("settings-status", "Не удалось сохранить настройки", "error");
+  }
+}
+
 // --- Таблица лидеров ---
 async function loadLeaderboard() {
   const el = document.getElementById("leaderboard");
   el.innerHTML = "<div class='empty'>Загрузка...</div>";
   try {
-    const res = await fetch("/api/leaderboard", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ initData: tg.initData, period: currentPeriod }),
-    });
+    const res = await fetch(`/api/leaderboard?period=${currentPeriod}`);
     const data = await res.json();
     if (!data.length) {
       el.innerHTML = "<div class='empty'>Пока пусто</div>";
@@ -503,137 +723,6 @@ async function loadLeaderboard() {
   }
 }
 
-// --- Клиенты ---
-async function searchBuyer() {
-  const input = document.getElementById("buyer-search");
-  const status = document.getElementById("buyer-status");
-  const result = document.getElementById("buyer-result");
-  const username = input.value.trim().replace(/^@/, "");
-
-  if (!username) {
-    status.textContent = "Введи юзернейм покупателя";
-    result.style.display = "none";
-    return;
-  }
-
-  status.textContent = "Поиск...";
-  result.style.display = "none";
-  try {
-    const res = await fetch("/api/buyers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ initData: tg.initData, username }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || "Ошибка поиска");
-
-    if (!data.count) {
-      status.textContent = "Покупок не найдено";
-      return;
-    }
-
-    status.textContent = "";
-    result.style.display = "block";
-    result.innerHTML = `
-      <div class="buyer-head">
-        <div class="buyer-name">@${escapeHtml(username)}</div>
-        <div class="buyer-total">${Math.round(data.total)}₽</div>
-        <div class="buyer-meta">${pluralize(data.count, "покупка", "покупки", "покупок")}</div>
-      </div>
-      <div>${data.items.map((item) => `
-        <div class="history-item">
-          <div class="history-top">
-            <div class="history-product">${escapeHtml(item.product)}</div>
-            <div class="history-amount">${Math.round(item.amount)}₽</div>
-          </div>
-          <div class="history-bottom">
-            ${item.category ? `<span>${escapeHtml(item.category)}</span>` : ""}
-            <span>${formatDate(item.created_at)}</span>
-          </div>
-        </div>`).join("")}</div>`;
-  } catch (e) {
-    console.error(e);
-    status.textContent = e.message || "Не удалось выполнить поиск";
-  }
-}
-
-function escapeHtml(value) {
-  return String(value ?? "").replace(/[&<>'"]/g, (char) => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[char]));
-}
-
-function pluralize(n, one, few, many) {
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (mod10 === 1 && mod100 !== 11) return `${n} ${one}`;
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return `${n} ${few}`;
-  return `${n} ${many}`;
-}
-
-function formatDate(value) {
-  if (!value) return "";
-  const d = new Date(value.replace(" ", "T") + "Z");
-  if (Number.isNaN(d.getTime())) return value;
-  return d.toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-}
-
-// --- Настройки владельца ---
-async function loadSettings() {
-  const status = document.getElementById("settings-status");
-  status.textContent = "Загрузка...";
-  try {
-    const res = await fetch("/api/settings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ initData: tg.initData }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || "Нет доступа");
-    document.getElementById("commission-input").value = data.commission_percent;
-    document.getElementById("milestone-input").value = data.buyer_milestone_amount;
-    status.textContent = "";
-  } catch (e) {
-    status.textContent = "⛔ Нет доступа";
-  }
-}
-
-async function saveSettings() {
-  const commission = document.getElementById("commission-input").value;
-  const milestone = document.getElementById("milestone-input").value;
-  const status = document.getElementById("settings-status");
-  status.textContent = "Сохранение...";
-  try {
-    const res = await fetch("/api/settings/save", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ initData: tg.initData, commission_percent: commission, buyer_milestone_amount: milestone }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || "Не удалось сохранить");
-    status.textContent = "✅ Сохранено";
-    if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
-  } catch (e) {
-    status.textContent = "Ошибка: " + (e.message || "не удалось сохранить");
-  }
-}
-
-// Проверяем владельца при открытии приложения. Настройки скрыты от всех остальных.
-async function initOwnerSettings() {
-  try {
-    const res = await fetch("/api/settings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ initData: tg.initData }),
-    });
-    if (res.ok) {
-      document.getElementById("settings-nav").style.display = "block";
-    }
-  } catch (e) {
-    console.debug("Settings are not available for this user");
-  }
-}
-
-initOwnerSettings();
-
 document.querySelectorAll(".tab").forEach((tab) => {
   tab.addEventListener("click", () => {
     document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
@@ -642,6 +731,8 @@ document.querySelectorAll(".tab").forEach((tab) => {
     loadLeaderboard();
   });
 });
+
+loadStats();
 </script>
 </body>
 </html>

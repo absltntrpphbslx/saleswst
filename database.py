@@ -120,21 +120,15 @@ def get_buyer_stats(buyer_username):
     }
 
 
-def _period_start(period):
-    now = datetime.utcnow()
-    if period == "day":
-        return now.replace(hour=0, minute=0, second=0, microsecond=0)
-    if period == "week":
-        start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        return start - timedelta(days=start.weekday())
-    if period == "month":
-        return now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    return None
-
-
 def get_leaderboard(period="all"):
     conn = get_conn()
-    since = _period_start(period)
+    since = None
+    if period == "day":
+        since = (datetime.utcnow() - timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
+    elif period == "week":
+        since = (datetime.utcnow() - timedelta(days=7)).strftime("%Y-%m-%d %H:%M:%S")
+    elif period == "month":
+        since = (datetime.utcnow() - timedelta(days=30)).strftime("%Y-%m-%d %H:%M:%S")
 
     query = """
         SELECT u.full_name, u.username, SUM(t.amount) as total, COUNT(t.id) as count
@@ -143,7 +137,7 @@ def get_leaderboard(period="all"):
     params = []
     if since:
         query += " WHERE t.created_at >= ?"
-        params.append(since.strftime("%Y-%m-%d %H:%M:%S"))
+        params.append(since)
     query += " GROUP BY u.id ORDER BY total DESC"
     rows = conn.execute(query, params).fetchall()
     conn.close()
@@ -167,9 +161,9 @@ def get_user_stats(tg_id):
         row = conn.execute(query, params).fetchone()
         return row["total"], row["count"]
 
-    day_since = _period_start("day").strftime("%Y-%m-%d %H:%M:%S")
-    week_since = _period_start("week").strftime("%Y-%m-%d %H:%M:%S")
-    month_since = _period_start("month").strftime("%Y-%m-%d %H:%M:%S")
+    day_since = (datetime.utcnow() - timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
+    week_since = (datetime.utcnow() - timedelta(days=7)).strftime("%Y-%m-%d %H:%M:%S")
+    month_since = (datetime.utcnow() - timedelta(days=30)).strftime("%Y-%m-%d %H:%M:%S")
 
     total_day, count_day = sum_since(day_since)
     total_week, count_week = sum_since(week_since)
@@ -244,8 +238,13 @@ def set_monthly_goal(tg_id, amount):
 
 def get_top_tg_ids(period="all", limit=3):
     conn = get_conn()
-    since = _period_start(period)
-    since = since.strftime("%Y-%m-%d %H:%M:%S") if since else None
+    since = None
+    if period == "day":
+        since = (datetime.utcnow() - timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
+    elif period == "week":
+        since = (datetime.utcnow() - timedelta(days=7)).strftime("%Y-%m-%d %H:%M:%S")
+    elif period == "month":
+        since = (datetime.utcnow() - timedelta(days=30)).strftime("%Y-%m-%d %H:%M:%S")
 
     query = """
         SELECT u.tg_id, SUM(t.amount) as total
