@@ -47,7 +47,7 @@
     margin-bottom: 16px;
   }
 
-  input {
+  input, select {
     width: 100%;
     padding: 14px;
     margin-bottom: 10px;
@@ -56,9 +56,11 @@
     font-size: 15px;
     background: var(--surface-2);
     color: var(--text);
+    font-family: inherit;
   }
+  select { appearance: none; -webkit-appearance: none; }
   input::placeholder { color: var(--text-dim); }
-  input:focus { outline: none; border-color: var(--accent-dim); }
+  input:focus, select:focus { outline: none; border-color: var(--accent-dim); }
 
   button.primary {
     width: 100%;
@@ -191,7 +193,15 @@
   <div class="screen active" id="screen-add">
     <h1>Внести продажу</h1>
     <div class="card">
-      <input id="product" placeholder="Что продали?" />
+      <select id="category">
+        <option value="">Категория (необязательно)</option>
+        <option value="Robux">Robux</option>
+        <option value="Реферальная ссылка">Реферальная ссылка</option>
+        <option value="Аккаунт">Аккаунт</option>
+        <option value="Другое">Другое</option>
+      </select>
+      <input id="product" placeholder="Что именно продано? (например: 800 Robux)" />
+      <input id="buyer" placeholder="Юзернейм покупателя (необязательно)" />
       <input id="amount" type="number" inputmode="decimal" placeholder="Сумма, ₽" />
       <button class="primary" onclick="submitTx()">Добавить</button>
       <div id="status"></div>
@@ -296,10 +306,14 @@ document.querySelectorAll(".navbtn").forEach((btn) => {
 
 // --- Добавление продажи ---
 async function submitTx() {
+  const categoryEl = document.getElementById("category");
   const productEl = document.getElementById("product");
+  const buyerEl = document.getElementById("buyer");
   const amountEl = document.getElementById("amount");
   const status = document.getElementById("status");
+  const category = categoryEl.value;
   const product = productEl.value.trim();
+  const buyer_username = buyerEl.value.trim().replace(/^@/, "");
   const amount = amountEl.value;
 
   if (!product || !amount) {
@@ -311,11 +325,13 @@ async function submitTx() {
     const res = await fetch("/api/transactions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ initData: tg.initData, product, amount }),
+      body: JSON.stringify({ initData: tg.initData, product, amount, category, buyer_username }),
     });
     if (!res.ok) throw new Error(await res.text());
     productEl.value = "";
+    buyerEl.value = "";
     amountEl.value = "";
+    categoryEl.value = "";
     status.textContent = "✅ Добавлено";
     if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
   } catch (e) {

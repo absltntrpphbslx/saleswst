@@ -27,6 +27,8 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL REFERENCES users(id),
             product TEXT NOT NULL,
+            category TEXT,
+            buyer_username TEXT,
             amount REAL NOT NULL,
             created_at TEXT DEFAULT (datetime('now'))
         );
@@ -36,9 +38,17 @@ def init_db():
         );
         """
     )
-    # миграция для баз, созданных до появления monthly_goal
+    # миграции для баз, созданных до появления новых колонок
     try:
         conn.execute("ALTER TABLE users ADD COLUMN monthly_goal REAL DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        conn.execute("ALTER TABLE transactions ADD COLUMN category TEXT")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        conn.execute("ALTER TABLE transactions ADD COLUMN buyer_username TEXT")
     except sqlite3.OperationalError:
         pass
     conn.commit()
@@ -60,18 +70,54 @@ def upsert_user(tg_id, username, full_name):
     return dict(row) if row else None
 
 
-def add_transaction(tg_id, product, amount):
+def add_transaction(tg_id, product, amount, category=None, buyer_username=None):
     conn = get_conn()
     user = conn.execute("SELECT id FROM users WHERE tg_id=?", (tg_id,)).fetchone()
     if not user:
         conn.close()
         raise ValueError("User not found")
     conn.execute(
-        "INSERT INTO transactions (user_id, product, amount) VALUES (?, ?, ?)",
-        (user["id"], product, amount),
+        "INSERT INTO transactions (user_id, product, category, buyer_username, amount) VALUES (?, ?, ?, ?, ?)",
+        (user["id"], product, category, buyer_username, amount),
     )
     conn.commit()
     conn.close()
+
+
+def get_buyer_total(buyer_username):
+    """Суммарная сумма покупок конкретного покупателя (по юзернейму, без учёта регистра)."""
+    if not buyer_username:
+        return 0.0
+    conn = get_conn()
+    row = conn.execute(
+        "SELECT COALESCE(SUM(amount),0) as total FROM transactions WHERE LOWER(buyer_username)=LOWER(?)",
+        (buyer_username,),
+    ).fetchone()
+    conn.close()
+    return row["total"]
+
+
+def get_buyer_stats(buyer_username):
+    """Детальная статистика по покупателю: сколько всего потратил и что именно покупал."""
+    conn = get_conn()
+    total_row = conn.execute(
+        "SELECT COALESCE(SUM(amount),0) as total, COUNT(*) as count FROM transactions WHERE LOWER(buyer_username)=LOWER(?)",
+        (buyer_username,),
+    ).fetchone()
+    items = conn.execute(
+        """
+        SELECT product, category, amount, created_at FROM transactions
+        WHERE LOWER(buyer_username)=LOWER(?)
+        ORDER BY created_at DESC LIMIT 20
+        """,
+        (buyer_username,),
+    ).fetchall()
+    conn.close()
+    return {
+        "total": total_row["total"],
+        "count": total_row["count"],
+        "items": [dict(i) for i in items],
+    }
 
 
 def get_leaderboard(period="all"):

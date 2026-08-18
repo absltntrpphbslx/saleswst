@@ -48,9 +48,52 @@ async def cmd_start(message: Message):
         "Команды:\n"
         "/leaderboard — таблица лидеров текстом\n"
         "/setgroup — включить уведомления о продажах в этом групповом чате (запускать в группе)\n"
-        "/setcommission [процент] — задать долю воркера от суммы (например: /setcommission 70)",
+        "/setcommission [процент] — задать долю воркера от суммы (например: /setcommission 70)\n"
+        "/setmilestone [сумма] — порог суммарных покупок клиента для анонимного уведомления о крупной сделке\n"
+        "/buyer [юзернейм] — посмотреть, сколько и чего купил конкретный покупатель",
         reply_markup=kb,
     )
+
+
+@dp.message(Command("setmilestone"))
+async def cmd_setmilestone(message: Message):
+    parts = message.text.split()
+    if len(parts) != 2 or not parts[1].replace(".", "", 1).isdigit():
+        await message.answer(
+            "Использование: /setmilestone 50000\n"
+            "Это значит: когда суммарные покупки одного клиента достигнут 50000₽, 100000₽, 150000₽ и т.д. — "
+            "в чат придёт анонимное уведомление о крупной сделке (без имени покупателя)."
+        )
+        return
+    amount = float(parts[1])
+    if amount <= 0:
+        await message.answer("Сумма должна быть больше нуля.")
+        return
+    db.set_config("buyer_milestone_amount", str(amount))
+    await message.answer(f"✅ Порог крупной сделки установлен: {amount:.0f}₽.")
+
+
+@dp.message(Command("buyer"))
+async def cmd_buyer(message: Message):
+    parts = message.text.split(maxsplit=1)
+    if len(parts) != 2:
+        await message.answer("Использование: /buyer username  (без @)")
+        return
+    username = parts[1].lstrip("@").strip()
+    stats = db.get_buyer_stats(username)
+    if not stats["items"]:
+        await message.answer(f"У покупателя @{html.escape(username)} пока нет зафиксированных покупок.")
+        return
+    text = (
+        f"👤 Покупатель: @{html.escape(username)}\n"
+        f"💰 Всего потрачено: {stats['total']:.0f}₽\n"
+        f"🧾 Покупок: {stats['count']}\n\n"
+        f"Последние покупки:\n"
+    )
+    for item in stats["items"][:10]:
+        cat = f" [{item['category']}]" if item["category"] else ""
+        text += f"• {item['product']}{cat} — {item['amount']:.0f}₽\n"
+    await message.answer(text)
 
 
 @dp.message(Command("setcommission"))
@@ -119,6 +162,8 @@ async def create_transaction(request: Request):
     user = validate_init_data(body.get("initData", ""))
 
     product = str(body.get("product", "")).strip()[:200]
+    category = str(body.get("category", "")).strip()[:100] or None
+    buyer_username = str(body.get("buyer_username", "")).strip().lstrip("@")[:100] or None
     try:
         amount = float(body.get("amount"))
     except (TypeError, ValueError):
@@ -129,10 +174,11 @@ async def create_transaction(request: Request):
     full_name = f"{user.get('first_name', '')} {user.get('last_name', '')}".strip()
     db.upsert_user(user["id"], user.get("username"), full_name)
 
-    # запоминаем топ-3 общего зачёта ДО добавления транзакции, чтобы понять, кого вытеснили
+    # запоминаем топ-3 общего зачёта и сумму покупок этого клиента ДО добавления транзакции
     old_top3 = db.get_top_tg_ids("all", limit=3)
+    buyer_total_before = db.get_buyer_total(buyer_username) if buyer_username else 0
 
-    db.add_transaction(user["id"], product, amount)
+    db.add_transaction(user["id"], product, amount, category, buyer_username)
 
     group_chat_id = db.get_config("group_chat_id")
     if group_chat_id:
@@ -140,17 +186,40 @@ async def create_transaction(request: Request):
         commission_percent = db.get_config("commission_percent")
         share = amount * (float(commission_percent) / 100) if commission_percent else amount
 
-        text = (
-            "🏆 <b>Новый профит!</b>\n\n"
-            f"👤 Продавец: {html.escape(display_name)}\n"
-            f"💰 Сумма: {amount:.0f}₽\n"
-            f"💵 Доля: {share:.0f}₽\n"
-            f"📦 Товар: {html.escape(product)}"
-        )
+        # обычное уведомление о продаже — без упоминания покупателя (анонимно для группы)
+        lines = [
+            "🏆 <b>Новый профит!</b>",
+            "▫️▫️▫️▫️▫️▫️▫️▫️▫️▫️",
+            f"👤 Продавец: {html.escape(display_name)}",
+        ]
+        if category:
+            lines.append(f"📦 Категория: {html.escape(category)}")
+        lines.append(f"📝 Товар: {html.escape(product)}")
+        lines.append(f"💰 Сумма: {amount:.0f}₽")
+        lines.append(f"💵 Доля: {share:.0f}₽")
+        lines.append("▫️▫️▫️▫️▫️▫️▫️▫️▫️▫️")
+        text = "\n".join(lines)
+
         try:
             await bot.send_message(int(group_chat_id), text)
         except Exception:
             pass
+
+        # отдельное анонимное уведомление, если суммарные покупки клиента перевалили за новый порог
+        if buyer_username:
+            milestone = float(db.get_config("buyer_milestone_amount") or 50000)
+            buyer_total_after = buyer_total_before + amount
+            old_tier = int(buyer_total_before // milestone)
+            new_tier = int(buyer_total_after // milestone)
+            if new_tier > old_tier:
+                milestone_text = (
+                    "💎 <b>КРУПНАЯ СДЕЛКА!</b>\n\n"
+                    f"Один из клиентов суммарно закупился уже на {new_tier * milestone:.0f}₽+ 🔥🔥🔥"
+                )
+                try:
+                    await bot.send_message(int(group_chat_id), milestone_text)
+                except Exception:
+                    pass
 
     # проверяем, не вылетел ли кто-то из топ-3 общего зачёта после этой продажи
     new_top3 = db.get_top_tg_ids("all", limit=3)
